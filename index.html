@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Русская геометрия прыжок</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background-color: #0a0a1a;
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #gameContainer {
+            position: relative;
+            margin: 20px auto;
+        }
+
+        #gameCanvas {
+            background-color: #11112e;
+            border: 3px solid #2a2a5a;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 150, 255, 0.5);
+            display: block;
+        }
+
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        #levelInfo {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 10;
+            font-size: 20px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.7);
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            z-index: 10;
+            font-size: 16px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        #gameOver {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 20;
+            display: none;
+            border: 3px solid #ff0055;
+            box-shadow: 0 0 30px rgba(255, 0, 85, 0.7);
+        }
+
+        #levelComplete {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            z-index: 20;
+            display: none;
+            border: 3px solid #00ff88;
+            box-shadow: 0 0 30px rgba(0, 255, 136, 0.7);
+        }
+
+        h1 {
+            color: #00ccff;
+            font-size: 36px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(0, 204, 255, 0.7);
+        }
+
+        h2 {
+            color: #ffcc00;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: linear-gradient(to bottom, #00ccff, #0066ff);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 15px;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 4px 0 #0044cc;
+        }
+
+        button:hover {
+            background: linear-gradient(to bottom, #00ddff, #0088ff);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 #0044cc;
+        }
+
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 0 #0044cc;
+        }
+
+        .instruction {
+            margin: 10px 0;
+            color: #aaa;
+        }
+
+        .highlight {
+            color: #ffcc00;
+            font-weight: bold;
+        }
+
+        #levelSelect {
+            margin-top: 15px;
+        }
+
+        .level-btn {
+            margin: 5px;
+            padding: 8px 15px;
+            font-size: 16px;
+        }
+
+        .easy { background: linear-gradient(to bottom, #00cc88, #009955); box-shadow: 0 4px 0 #006633; }
+        .medium { background: linear-gradient(to bottom, #ffaa00, #ff6600); box-shadow: 0 4px 0 #cc5500; }
+        .hard { background: linear-gradient(to bottom, #ff3366, #cc0044); box-shadow: 0 4px 0 #990033; }
+    </style>
+</head>
+<body>
+    <h1>Русская геометрия прыжок</h1>
+    
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="1000" height="500"></canvas>
+        
+        <div id="ui">
+            <div>Очки: <span id="score">0</span></div>
+            <div>Жизни: <span id="lives">3</span></div>
+        </div>
+        
+        <div id="levelInfo">
+            Уровень: <span id="levelName">Лёгкий</span>
+        </div>
+        
+        <div id="controls">
+            <div class="instruction">Управление: <span class="highlight">ЛКМ</span>, <span class="highlight">Пробел</span> или <span class="highlight">Стрелка вверх</span> для прыжка</div>
+            <div class="instruction">Цель: дойти до конца уровня, избегая шипов и не врезаясь в кубы</div>
+            <div class="instruction">Новые механики: <span class="highlight">Пады</span> (подбрасывают вверх), <span class="highlight">Орбы</span> (нажми для прыжка)</div>
+        </div>
+        
+        <div id="gameOver">
+            <h2>ИГРА ОКОНЧЕНА!</h2>
+            <p>Ваш счёт: <span id="finalScore">0</span></p>
+            <p>Достигнут уровень: <span id="finalLevel">Лёгкий</span></p>
+            <button id="restartButton">Играть снова</button>
+            <div id="levelSelect">
+                <button class="level-btn easy" data-level="0">Лёгкий</button>
+                <button class="level-btn medium" data-level="1">Средний</button>
+                <button class="level-btn hard" data-level="2">Сложный</button>
+            </div>
+        </div>
+        
+        <div id="levelComplete">
+            <h2>УРОВЕНЬ ПРОЙДЕН!</h2>
+            <p>Счёт: <span id="levelScore">0</span></p>
+            <p>Переход к следующему уровню...</p>
+            <button id="nextLevelButton">Следующий уровень</button>
+            <div id="levelSelectComplete">
+                <button class="level-btn easy" data-level="0">Лёгкий</button>
+                <button class="level-btn medium" data-level="1">Средний</button>
+                <button class="level-btn hard" data-level="2">Сложный</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Получаем элементы DOM
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const livesElement = document.getElementById('lives');
+        const levelNameElement = document.getElementById('levelName');
+        const gameOverScreen = document.getElementById('gameOver');
+        const levelCompleteScreen = document.getElementById('levelComplete');
+        const finalScoreElement = document.getElementById('finalScore');
+        const finalLevelElement = document.getElementById('finalLevel');
+        const levelScoreElement = document.getElementById('levelScore');
+        const restartButton = document.getElementById('restartButton');
+        const nextLevelButton = document.getElementById('nextLevelButton');
+        
+        // Игровые переменные
+        let score = 0;
+        let lives = 3;
+        let currentLevel = 0;
+        let gameRunning = true;
+        let levelComplete = false;
+        
+        // Базовая скорость для всех уровней
+        const BASE_SPEED = 2.8;
+        
+        // Уровни игры - переработанные
+        const levels = [
+            {
+                name: "Лёгкий",
+                speed: BASE_SPEED,
+                playerColor: "#00ccff",
+                bgColor: "#11112e",
+                platforms: [
+                    // Простые платформы для обучения
+                    { x: 200, y: 350, width: 120, height: 20 },
+                    { x: 400, y: 320, width: 100, height: 20 },
+                    { x: 600, y: 340, width: 80, height: 20 },
+                    { x: 800, y: 300, width: 120, height: 20 },
+                    { x: 1050, y: 350, width: 100, height: 20 },
+                    { x: 1300, y: 320, width: 120, height: 20 },
+                    { x: 1550, y: 340, width: 100, height: 20 },
+                    { x: 1800, y: 300, width: 120, height: 20 },
+                    { x: 2100, y: 350, width: 150, height: 20 },
+                    { x: 2400, y: 320, width: 120, height: 20 },
+                    { x: 2700, y: 340, width: 100, height: 20 },
+                    { x: 3000, y: 350, width: 150, height: 20 }
+                ],
+                obstacles: [
+                    // Простые препятствия
+                    { x: 450, y: 380, width: 30, height: 30 },
+                    { x: 900, y: 380, width: 30, height: 30 },
+                    { x: 1400, y: 380, width: 30, height: 30 },
+                    { x: 1950, y: 380, width: 30, height: 30 },
+                    { x: 2500, y: 380, width: 30, height: 30 }
+                ],
+                spikes: [
+                    // Мало шипов
+                    { x: 700, y: 430, width: 40, height: 20 },
+                    { x: 1600, y: 430, width: 40, height: 20 },
+                    { x: 2300, y: 430, width: 40, height: 20 }
+                ],
+                bouncePads: [
+                    // Добавляем пады для обучения
+                    { x: 500, y: 330, width: 40, height: 10, active: true }
+                ],
+                orbs: [
+                    // Добавляем орбы для обучения
+                    { x: 1200, y: 280, width: 25, height: 25, active: true }
+                ],
+                finishLine: 3200
+            },
+            {
+                name: "Средний",
+                speed: BASE_SPEED,
+                playerColor: "#ffcc00",
+                bgColor: "#1a1a2e",
+                platforms: [
+                    // Более сложное расположение платформ
+                    { x: 200, y: 350, width: 100, height: 20 },
+                    { x: 350, y: 320, width: 80, height: 20 },
+                    { x: 500, y: 290, width: 70, height: 20 },
+                    { x: 650, y: 340, width: 90, height: 20 },
+                    { x: 800, y: 310, width: 80, height: 20 },
+                    { x: 1000, y: 280, width: 70, height: 20 },
+                    { x: 1200, y: 350, width: 100, height: 20 },
+                    { x: 1400, y: 320, width: 80, height: 20 },
+                    { x: 1600, y: 290, width: 70, height: 20 },
+                    { x: 1800, y: 340, width: 90, height: 20 },
+                    { x: 2050, y: 310, width: 80, height: 20 },
+                    { x: 2250, y: 350, width: 100, height: 20 },
+                    { x: 2500, y: 320, width: 80, height: 20 },
+                    { x: 2700, y: 290, width: 70, height: 20 },
+                    { x: 2900, y: 340, width: 100, height: 20 }
+                ],
+                obstacles: [
+                    // Больше препятствий
+                    { x: 400, y: 380, width: 30, height: 30 },
+                    { x: 550, y: 380, width: 30, height: 30 },
+                    { x: 900, y: 380, width: 30, height: 30 },
+                    { x: 1100, y: 380, width: 30, height: 30 },
+                    { x: 1500, y: 380, width: 30, height: 30 },
+                    { x: 1700, y: 380, width: 30, height: 30 },
+                    { x: 2100, y: 380, width: 30, height: 30 },
+                    { x: 2400, y: 380, width: 30, height: 30 },
+                    { x: 2800, y: 380, width: 30, height: 30 }
+                ],
+                spikes: [
+                    // Больше шипов
+                    { x: 750, y: 430, width: 40, height: 20 },
+                    { x: 1300, y: 430, width: 40, height: 20 },
+                    { x: 1650, y: 430, width: 40, height: 20 },
+                    { x: 1950, y: 430, width: 40, height: 20 },
+                    { x: 2350, y: 430, width: 40, height: 20 },
+                    { x: 2650, y: 430, width: 40, height: 20 }
+                ],
+                bouncePads: [
+                    // Пады в сложных местах
+                    { x: 600, y: 270, width: 40, height: 10, active: true },
+                    { x: 1900, y: 270, width: 40, height: 10, active: true }
+                ],
+                orbs: [
+                    // Орбы для сложных прыжков
+                    { x: 1400, y: 250, width: 25, height: 25, active: true },
+                    { x: 2600, y: 250, width: 25, height: 25, active: true }
+                ],
+                finishLine: 3200
+            },
+            {
+                name: "Сложный",
+                speed: BASE_SPEED, // Такая же скорость
+                playerColor: "#ff3366",
+                bgColor: "#2a1a2e",
+                platforms: [
+                    // Переработанный уровень с постепенным усложнением
+                    // Начало уровня - простые платформы
+                    { x: 200, y: 350, width: 100, height: 20 },
+                    { x: 350, y: 330, width: 90, height: 20 },
+                    { x: 500, y: 310, width: 80, height: 20 },
+                    { x: 650, y: 340, width: 90, height: 20 },
+                    { x: 800, y: 320, width: 80, height: 20 },
+                    
+                    // Средняя часть - добавляем сложности
+                    { x: 1000, y: 290, width: 70, height: 20 },
+                    { x: 1150, y: 340, width: 80, height: 20 },
+                    { x: 1300, y: 310, width: 70, height: 20 },
+                    { x: 1450, y: 280, width: 60, height: 20 },
+                    { x: 1600, y: 340, width: 80, height: 20 },
+                    
+                    // Сложная часть - узкие платформы
+                    { x: 1800, y: 320, width: 60, height: 20 },
+                    { x: 1950, y: 290, width: 50, height: 20 },
+                    { x: 2100, y: 340, width: 60, height: 20 },
+                    { x: 2250, y: 310, width: 50, height: 20 },
+                    { x: 2400, y: 280, width: 60, height: 20 },
+                    
+                    // Финальная часть - возврат к более широким платформам
+                    { x: 2600, y: 340, width: 90, height: 20 },
+                    { x: 2750, y: 320, width: 80, height: 20 },
+                    { x: 2900, y: 350, width: 100, height: 20 }
+                ],
+                obstacles: [
+                    // Начало - мало препятствий
+                    { x: 450, y: 380, width: 30, height: 30 },
+                    
+                    // Средняя часть - больше препятствий
+                    { x: 850, y: 380, width: 30, height: 30 },
+                    { x: 1050, y: 380, width: 30, height: 30 },
+                    { x: 1250, y: 380, width: 30, height: 30 },
+                    
+                    // Сложная часть - много препятствий
+                    { x: 1650, y: 380, width: 30, height: 30 },
+                    { x: 1850, y: 380, width: 30, height: 30 },
+                    { x: 2050, y: 380, width: 30, height: 30 },
+                    
+                    // Финальная часть - сложные комбинации
+                    { x: 2450, y: 380, width: 30, height: 30 },
+                    { x: 2650, y: 380, width: 30, height: 30 },
+                    { x: 2850, y: 380, width: 30, height: 30 }
+                ],
+                spikes: [
+                    // Начало - мало шипов
+                    { x: 700, y: 430, width: 40, height: 20 },
+                    
+                    // Средняя часть - больше шипов
+                    { x: 1100, y: 430, width: 40, height: 20 },
+                    { x: 1400, y: 430, width: 40, height: 20 },
+                    
+                    // Сложная часть - много шипов
+                    { x: 1750, y: 430, width: 40, height: 20 },
+                    { x: 2000, y: 430, width: 40, height: 20 },
+                    { x: 2200, y: 430, width: 40, height: 20 },
+                    
+                    // Финальная часть - сложные комбинации
+                    { x: 2550, y: 430, width: 40, height: 20 },
+                    { x: 2750, y: 430, width: 40, height: 20 }
+                ],
+                bouncePads: [
+                    // Пады для сложных секций
+                    { x: 950, y: 270, width: 40, height: 10, active: true },
+                    { x: 1700, y: 270, width: 40, height: 10, active: true },
+                    { x: 2350, y: 250, width: 40, height: 10, active: true }
+                ],
+                orbs: [
+                    // Орбы для сложных прыжков
+                    { x: 1350, y: 240, width: 25, height: 25, active: true },
+                    { x: 1900, y: 220, width: 25, height: 25, active: true },
+                    { x: 2700, y: 240, width: 25, height: 25, active: true }
+                ],
+                finishLine: 3200
+            }
+        ];
+        
+        // Игрок
+        const player = {
+            x: 50,
+            y: 300,
+            width: 30,
+            height: 30,
+            velocityY: 0,
+            velocityX: 0,
+            jumpForce: -8.5, // Более плавный прыжок
+            gravity: 0.25,   // Меньше гравитации для более плавного падения
+            isJumping: false,
+            color: levels[currentLevel].playerColor,
+            canJump: true,   // Флаг, позволяющий прыгать
+            jumpCooldown: 0  // Задержка после прыжка
+        };
+        
+        // Камера
+        const camera = {
+            x: 0,
+            y: 0
+        };
+        
+        // Фоновые элементы
+        const backgroundStars = [];
+        const backgroundBuildings = [];
+        
+        // Инициализация фоновых элементов
+        function initBackground() {
+            // Создаем звезды
+            backgroundStars.length = 0;
+            for (let i = 0; i < 100; i++) {
+                backgroundStars.push({
+                    x: Math.random() * 4000,
+                    y: Math.random() * 300,
+                    size: Math.random() * 1.5 + 0.5,
+                    speed: Math.random() * 0.3 + 0.1
+                });
+            }
+            
+            // Создаем здания на заднем плане
+            backgroundBuildings.length = 0;
+            let xPos = 0;
+            while (xPos < 4000) {
+                const width = Math.random() * 150 + 80;
+                const height = Math.random() * 180 + 60;
+                backgroundBuildings.push({
+                    x: xPos,
+                    y: canvas.height - 200 - height,
+                    width: width,
+                    height: height,
+                    color: `hsl(${Math.random() * 30 + 230}, 60%, ${Math.random() * 10 + 15}%)`,
+                    speed: Math.random() * 0.1 + 0.05
+                });
+                xPos += width + Math.random() * 200 + 50;
+            }
+        }
+        
+        // Управление
+        const keys = {};
+        let mousePressed = false;
+        let jumpPressed = false;
+        
+        // Инициализация игры
+        function initGame() {
+            score = 0;
+            lives = 3;
+            gameRunning = true;
+            levelComplete = false;
+            
+            // Сброс игрока
+            player.x = 50;
+            player.y = 300;
+            player.velocityY = 0;
+            player.velocityX = 0;
+            player.isJumping = false;
+            player.canJump = true;
+            player.jumpCooldown = 0;
+            player.color = levels[currentLevel].playerColor;
+            
+            // Сброс камеры
+            camera.x = 0;
+            camera.y = 0;
+            
+            // Активация всех объектов уровня
+            const level = levels[currentLevel];
+            if (level.bouncePads) {
+                level.bouncePads.forEach(pad => pad.active = true);
+            }
+            if (level.orbs) {
+                level.orbs.forEach(orb => orb.active = true);
+            }
+            
+            // Инициализация фона
+            initBackground();
+            
+            // Обновление UI
+            updateUI();
+            
+            // Скрыть экраны завершения
+            gameOverScreen.style.display = 'none';
+            levelCompleteScreen.style.display = 'none';
+        }
+        
+        // Обновление UI
+        function updateUI() {
+            scoreElement.textContent = score;
+            livesElement.textContent = lives;
+            levelNameElement.textContent = levels[currentLevel].name;
+        }
+        
+        // Обработка ввода
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            
+            // Прыжок при нажатии пробела или стрелки вверх
+            if ((e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') && !jumpPressed && player.canJump && gameRunning) {
+                jumpPressed = true;
+                player.velocityY = player.jumpForce;
+                player.isJumping = true;
+                player.canJump = false;
+                player.jumpCooldown = 10; // Небольшая задержка
+            }
+        });
+        
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+            if (e.key === ' ' || e.key === 'ArrowUp' || e.key === 'w') {
+                jumpPressed = false;
+            }
+        });
+        
+        canvas.addEventListener('mousedown', () => {
+            mousePressed = true;
+            if (!jumpPressed && player.canJump && gameRunning) {
+                jumpPressed = true;
+                player.velocityY = player.jumpForce;
+                player.isJumping = true;
+                player.canJump = false;
+                player.jumpCooldown = 10;
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            mousePressed = false;
+            jumpPressed = false;
+        });
+        
+        // Проверка столкновений
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+        
+        // Проверка столкновения с платформами
+        function checkPlatformCollision() {
+            const level = levels[currentLevel];
+            
+            for (let platform of level.platforms) {
+                // Проверка, стоит ли игрок на платформе
+                if (player.x < platform.x + platform.width &&
+                    player.x + player.width > platform.x &&
+                    player.y + player.height <= platform.y + 5 &&
+                    player.y + player.height + player.velocityY >= platform.y &&
+                    player.velocityY >= 0) {
+                    
+                    player.y = platform.y - player.height;
+                    player.velocityY = 0;
+                    player.isJumping = false;
+                    player.canJump = true;
+                    return true;
+                }
+            }
+            
+            // Проверка на землю
+            if (player.y + player.height >= canvas.height - 50) {
+                player.y = canvas.height - 50 - player.height;
+                player.velocityY = 0;
+                player.isJumping = false;
+                player.canJump = true;
+                return true;
+            }
+            
+            return false;
+        }
+        
+        // Проверка столкновения с препятствиями
+        function checkObstacleCollision() {
+            const level = levels[currentLevel];
+            
+            for (let obstacle of level.obstacles) {
+                if (checkCollision(player, obstacle)) {
+                    // Проверяем, приземлился ли игрок сверху на препятствие
+                    if (player.y + player.height <= obstacle.y + 10 && player.velocityY >= 0) {
+                        // Приземление на препятствие - можно стоять
+                        player.y = obstacle.y - player.height;
+                        player.velocityY = 0;
+                        player.isJumping = false;
+                        player.canJump = true;
+                        return false;
+                    } else {
+                        // Столкновение сбоку или снизу - смерть
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
+        
+        // Проверка столкновения с шипами
+        function checkSpikeCollision() {
+            const level = levels[currentLevel];
+            
+            for (let spike of level.spikes) {
+                if (checkCollision(player, spike)) {
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        
+        // Проверка столкновения с падами
+        function checkBouncePadCollision() {
+            const level = levels[currentLevel];
+            
+            if (!level.bouncePads) return false;
+            
+            for (let pad of level.bouncePads) {
+                if (pad.active && checkCollision(player, pad)) {
+                    // Проверяем, приземлился ли игрок сверху на пад
+                    if (player.y + player.height <= pad.y + 10 && player.velocityY >= 0) {
+                        // Подбрасываем игрока вверх
+                        player.velocityY = -12; // Сильный прыжок
+                        player.isJumping = true;
+                        player.canJump = false;
+                        player.jumpCooldown = 15;
+                        
+                        // Визуальный эффект
+                        pad.active = false;
+                        setTimeout(() => {
+                            pad.active = true;
+                        }, 500);
+                        
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
+        
+        // Проверка столкновения с орбами
+        function checkOrbCollision() {
+            const level = levels[currentLevel];
+            
+            if (!level.orbs) return false;
+            
+            for (let orb of level.orbs) {
+                if (orb.active && checkCollision(player, orb)) {
+                    // Проверяем, нажата ли клавиша прыжка
+                    if (keys[' '] || keys['ArrowUp'] || keys['w'] || mousePressed) {
+                        // Подбрасываем игрока вверх
+                        player.velocityY = -10; // Средний прыжок
+                        player.isJumping = true;
+                        player.canJump = false;
+                        player.jumpCooldown = 15;
+                        
+                        // Деактивируем орб на некоторое время
+                        orb.active = false;
+                        setTimeout(() => {
+                            orb.active = true;
+                        }, 1000);
+                        
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        }
+        
+        // Обновление игровой логики
+        function update() {
+            if (!gameRunning) return;
+            
+            const level = levels[currentLevel];
+            
+            // Движение камеры
+            camera.x += level.speed;
+            
+            // Обновление задержки прыжка
+            if (player.jumpCooldown > 0) {
+                player.jumpCooldown--;
+            }
+            
+            // Гравитация
+            player.velocityY += player.gravity;
+            player.y += player.velocityY;
+            
+            // Движение игрока вправо вместе с камерой
+            player.x += level.speed;
+            
+            // Проверка столкновений
+            const onGround = checkPlatformCollision();
+            
+            // Если не на земле и не прыгает, разрешаем прыжок через орб
+            if (!onGround && !player.isJumping && player.velocityY > 0) {
+                player.canJump = false;
+            }
+            
+            // Проверка на столкновение с препятствиями
+            if (checkObstacleCollision()) {
+                loseLife();
+                return;
+            }
+            
+            // Проверка на столкновение с шипами
+            if (checkSpikeCollision()) {
+                loseLife();
+                return;
+            }
+            
+            // Проверка на столкновение с падами
+            checkBouncePadCollision();
+            
+            // Проверка на столкновение с орбами
+            checkOrbCollision();
+            
+            // Проверка на выход за пределы экрана
+            if (player.y > canvas.height) {
+                loseLife();
+                return;
+            }
+            
+            // Проверка на завершение уровня
+            if (player.x >= level.finishLine) {
+                completeLevel();
+            }
+            
+            // Увеличение счета
+            score += 1;
+            updateUI();
+        }
+        
+        // Потеря жизни
+        function loseLife() {
+            lives--;
+            updateUI();
+            
+            if (lives <= 0) {
+                gameOver();
+            } else {
+                // Перезапуск уровня при потере жизни
+                resetPlayer();
+            }
+        }
+        
+        // Сброс позиции игрока
+        function resetPlayer() {
+            player.x = 50;
+            player.y = 300;
+            player.velocityY = 0;
+            player.isJumping = false;
+            player.canJump = true;
+            player.jumpCooldown = 0;
+            camera.x = 0;
+        }
+        
+        // Завершение уровня
+        function completeLevel() {
+            levelComplete = true;
+            levelScoreElement.textContent = score;
+            levelCompleteScreen.style.display = 'block';
+            
+            // Автоматический переход к следующему уровню через 3 секунды
+            setTimeout(() => {
+                if (levelComplete) {
+                    nextLevel();
+                }
+            }, 3000);
+        }
+        
+        // Переход на следующий уровень
+        function nextLevel() {
+            currentLevel++;
+            
+            if (currentLevel >= levels.length) {
+                currentLevel = 0;
+                score += 1000; // Бонус за прохождение всех уровней
+            }
+            
+            initGame();
+        }
+        
+        // Конец игры
+        function gameOver() {
+            gameRunning = false;
+            finalScoreElement.textContent = score;
+            finalLevelElement.textContent = levels[currentLevel].name;
+            gameOverScreen.style.display = 'block';
+        }
+        
+        // Отрисовка фона
+        function drawBackground() {
+            const level = levels[currentLevel];
+            
+            // Градиентный фон
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, "#0a0a2a");
+            gradient.addColorStop(1, level.bgColor);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Далекие звезды (медленное движение)
+            ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+            for (let star of backgroundStars) {
+                // Звезды движутся очень медленно относительно камеры
+                const starX = (star.x - camera.x * star.speed * 0.1) % 4000;
+                if (starX >= 0 && starX <= canvas.width) {
+                    ctx.beginPath();
+                    ctx.arc(starX, star.y, star.size, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            
+            // Здания на заднем плане (медленное движение)
+            for (let building of backgroundBuildings) {
+                const buildingX = (building.x - camera.x * building.speed) % 4000;
+                if (buildingX >= -building.width && buildingX <= canvas.width) {
+                    // Здание
+                    ctx.fillStyle = building.color;
+                    ctx.fillRect(buildingX, building.y, building.width, building.height);
+                    
+                    // Окна
+                    ctx.fillStyle = "rgba(255, 255, 200, 0.6)";
+                    const windowSize = 8;
+                    const windowMargin = 10;
+                    
+                    for (let col = 0; col < Math.floor(building.width / (windowSize + windowMargin)); col++) {
+                        for (let row = 0; row < Math.floor(building.height / (windowSize + windowMargin)); row++) {
+                            if (Math.random() > 0.7) { // Не все окна "горят"
+                                ctx.fillRect(
+                                    buildingX + col * (windowSize + windowMargin) + windowMargin,
+                                    building.y + row * (windowSize + windowMargin) + windowMargin,
+                                    windowSize, windowSize
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Отрисовка игры
+        function draw() {
+            const level = levels[currentLevel];
+            
+            // Отрисовка фона
+            drawBackground();
+            
+            // Сохраняем состояние canvas для камеры
+            ctx.save();
+            ctx.translate(-camera.x, 0);
+            
+            // Отрисовка платформ
+            ctx.fillStyle = '#3366ff';
+            for (let platform of level.platforms) {
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                
+                // Добавляем текстуру к платформам
+                ctx.fillStyle = '#2244cc';
+                ctx.fillRect(platform.x + 2, platform.y + 2, platform.width - 4, 4);
+                ctx.fillStyle = '#3366ff';
+            }
+            
+            // Отрисовка препятствий (кубов)
+            ctx.fillStyle = '#ff6600';
+            for (let obstacle of level.obstacles) {
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                
+                // Добавляем детали к кубам
+                ctx.fillStyle = '#cc5500';
+                ctx.fillRect(obstacle.x + 5, obstacle.y + 5, obstacle.width - 10, 5);
+                ctx.fillStyle = '#ff6600';
+            }
+            
+            // Отрисовка шипов
+            ctx.fillStyle = '#ff0055';
+            for (let spike of level.spikes) {
+                // Рисуем треугольник (шип)
+                ctx.beginPath();
+                ctx.moveTo(spike.x, spike.y + spike.height);
+                ctx.lineTo(spike.x + spike.width / 2, spike.y);
+                ctx.lineTo(spike.x + spike.width, spike.y + spike.height);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Основание шипа
+                ctx.fillStyle = '#cc0044';
+                ctx.fillRect(spike.x, spike.y + spike.height - 5, spike.width, 5);
+                ctx.fillStyle = '#ff0055';
+            }
+            
+            // Отрисовка падов
+            if (level.bouncePads) {
+                for (let pad of level.bouncePads) {
+                    if (pad.active) {
+                        // Основание пада
+                        ctx.fillStyle = '#00ff88';
+                        ctx.fillRect(pad.x, pad.y, pad.width, pad.height);
+                        
+                        // Пружинный эффект
+                        ctx.fillStyle = '#00cc66';
+                        for (let i = 0; i < 4; i++) {
+                            ctx.fillRect(pad.x + i * 10, pad.y, 5, pad.height);
+                        }
+                    }
+                }
+            }
+            
+            // Отрисовка орбов
+            if (level.orbs) {
+                for (let orb of level.orbs) {
+                    if (orb.active) {
+                        // Внешний круг
+                        ctx.fillStyle = '#ffcc00';
+                        ctx.beginPath();
+                        ctx.arc(orb.x + orb.width/2, orb.y + orb.height/2, orb.width/2, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Внутренний круг
+                        ctx.fillStyle = '#ffff00';
+                        ctx.beginPath();
+                        ctx.arc(orb.x + orb.width/2, orb.y + orb.height/2, orb.width/3, 0, Math.PI * 2);
+                        ctx.fill();
+                        
+                        // Блеск
+                        ctx.fillStyle = '#ffffff';
+                        ctx.beginPath();
+                        ctx.arc(orb.x + orb.width/3, orb.y + orb.height/3, orb.width/6, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            }
+            
+            // Отрисовка финишной линии
+            ctx.fillStyle = '#00ff88';
+            ctx.fillRect(level.finishLine, 100, 20, 350);
+            
+            // Добавляем текст "FINISH"
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 24px Arial';
+            ctx.fillText('FINISH', level.finishLine - 10, 80);
+            
+            // Отрисовка игрока
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            
+            // Добавляем детали к игроку
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(player.x + 5, player.y + 5, player.width - 10, 5);
+            ctx.fillRect(player.x + 5, player.y + 20, player.width - 10, 5);
+            
+            // Восстанавливаем состояние canvas
+            ctx.restore();
+            
+            // Отрисовка земли
+            ctx.fillStyle = '#225522';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            
+            // Отрисовка декоративных элементов на земле
+            ctx.fillStyle = '#338833';
+            for (let i = 0; i < canvas.width; i += 40) {
+                ctx.fillRect(i, canvas.height - 50, 20, 10);
+            }
+            
+            // Отрисовка прогресса уровня
+            const progress = (player.x / level.finishLine) * 100;
+            ctx.fillStyle = '#00ccff';
+            ctx.fillRect(20, canvas.height - 20, (canvas.width - 40) * (progress / 100), 10);
+            
+            // Рамка прогресса
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(20, canvas.height - 20, canvas.width - 40, 10);
+        }
+        
+        // Игровой цикл
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Обработчики кнопок
+        restartButton.addEventListener('click', () => {
+            initGame();
+        });
+        
+        nextLevelButton.addEventListener('click', () => {
+            nextLevel();
+        });
+        
+        // Кнопки выбора уровня на экране завершения игры
+        document.querySelectorAll('#levelSelect .level-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                currentLevel = parseInt(button.getAttribute('data-level'));
+                initGame();
+            });
+        });
+        
+        // Кнопки выбора уровня на экране завершения уровня
+        document.querySelectorAll('#levelSelectComplete .level-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                currentLevel = parseInt(button.getAttribute('data-level'));
+                initGame();
+            });
+        });
+        
+        // Запуск игры
+        initGame();
+        gameLoop();
+    </script>
+</body>
+</html>
